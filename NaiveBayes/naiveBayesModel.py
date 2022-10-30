@@ -1,9 +1,11 @@
 from abc import abstractmethod
 import enum
+from operator import index
 from typing import Any, List
 from sklearn import preprocessing
 import pandas as pd
 import logging
+import numpy
 
 class DistributionType(enum.Enum):
     BinaryDST = 1
@@ -82,17 +84,71 @@ class BinaryDistrubtion(LikelihoodModel):
             self.successProbabilites[y_i] = truePositiveCount.iloc[y_i][0] / totalPositiveCount.iloc[y_i][0]
         # Now, each class, i, in self.successProbabilities represents the probability that X == 1 when i was the observered outcome.
         logging.info("\tBinaryDistribution: Calculated success probabilies for each class:")
-        logging.info(f"\tBinaryDistribution: \t{self.successProbabilites}")
+        logging.debug(f"\tBinaryDistribution: \t{self.successProbabilites}")
         logging.info("\tBinaryDistribution: Successfully fit to inputted data")
 
     def predict(self, x, cls):
         pass
 
-class GaussianDistribution(LikelihoodModel):
-    pass
-
 class MultiModelDistribution(LikelihoodModel):
-    pass
+    
+    dataEncoder = None
+    successProbabilites = [] 
+
+    def __init__(self, inputData: List, EncodedOutcomes: List, numberOfOutcomes: int):
+
+        # Convert the labeled input into an enumerated list by encoding it with a label encoder.
+        self.dataEncoder = preprocessing.LabelEncoder()
+        self.dataEncoder.fit(inputData)
+        super().__init__(inputData, EncodedOutcomes, numberOfOutcomes)
+
+    def fitToData(self):
+
+        logging.info(f"\tMultiModal: Converting data from labeled to encoded data with a totoal of {len(self.dataEncoder.classes_)} labels for : {self.dataEncoder.classes_}")
+        # Encode the data into a binary 0, 1
+        self.dataOutcomesTbl['data'] = pd.Series(self.dataEncoder.transform(self.dataOutcomesTbl['data']))
+
+        # For each class, y(i), we find a distribution of probabilities, [p1, p2, ..., pn] where n is the number of labels.
+        # self.successProbabilites = numpy.array
+        self.successProbabilites = [ [0 for n in range(len(self.dataEncoder.classes_))] for x in range(self.numberOfOutcomes)]
+        logging.info(f"\tMultiModal: Initalized a 2d array of success probabilities of size ({len(self.dataEncoder.classes_)} labels by {self.numberOfOutcomes} outcomes)")
+
+        # For each label, get the number of times X == label when y(i) is true, and get the number of times y(i) is true in totoal.
+        logging.info(f"\tMultiModal: Looping through each label in the dataset and calculating probability of success for each outcome...")
+        for label, name in enumerate(self.dataEncoder.classes_):
+            # Get the true positive for (x == label | y(i)) and the count of y(i)
+            truePositiveCount = self.dataOutcomesTbl.groupby("outcomes")[['data']].agg(lambda values : len([x for x in values if x == label]))
+            truePositiveCount.columns = ["TruePositive_Count"]
+            totalPositiveCount = self.dataOutcomesTbl.groupby("outcomes")[['data']].agg(lambda values : len(values))
+            totalPositiveCount.columns = ["TotalPositive_Count"]
+            
+            for outcome in range(self.numberOfOutcomes):
+                self.successProbabilites[outcome][label] = truePositiveCount.iloc[outcome][0] / totalPositiveCount.iloc[outcome][0]
+        logging.info("\tMultiModal: Calculated the success probabilities for each label for each class")
+        logging.debug(f"\t{self.successProbabilites}")
+        logging.info("\tMutliModal: Successfully fit to inputted data")
+
+    def predict(self, x, cls):
+        pass
+
+
+class GaussianDistribution(LikelihoodModel):
+    
+    successDistributionStats = [] 
+
+    def fitToData(self):
+
+        logging.info(f"\tGaussian: Calculating the standard devidation and mean of data for each outcome...")
+
+        # For each class, find the standard deviation and mean of values when that class is the outcome.
+        groupedData = self.dataOutcomesTbl.groupby('outcomes').agg(['std', 'mean'])
+        self.successDistributionStats = groupedData
+        logging.info("\tGuassian: Successfully calculated standard deviation and mean for each outcome")
+        logging.debug(f"\t\n{self.successDistributionStats}")
+        logging.info("\tGuassian: Successfully fit to inputted data")
+
+    def predict(self, x, cls):
+        pass
 
 class NaiveBayesModel:
     """
@@ -116,7 +172,7 @@ class NaiveBayesModel:
 
     outcomeEncoder = None
     priorList = []
-    likelihoods = []
+    likelihoodModels : List[LikelihoodModel] = []
     numberOfOutcomes = 0
 
     def fit(self, trainingData : pd.DataFrame, trainingDataClassifications : List[DistributionType], trainingOutcomes : List) -> List :
@@ -159,6 +215,7 @@ class NaiveBayesModel:
             # Use the training model assigned in the list.
             model = None
             chosenDistType = trainingDataClassifications[index]
+            logging.info("")
             if chosenDistType == DistributionType.BinaryDST:
                 logging.info(f"For feature #{index + 1} {column}, using BinaryDST Model")
                 model = BinaryDistrubtion(data, encodedOutcomes, self.numberOfOutcomes)
@@ -169,9 +226,29 @@ class NaiveBayesModel:
                 logging.info(f"For feature #{index + 1} {column}, using MultiModalDST Model")
                 model = MultiModelDistribution(data, encodedOutcomes, self.numberOfOutcomes)
             
-            self.likelihoods.append(model)
+            self.likelihoodModels.append(model)
 
 
-    def predict(TrainingData : pd.DataFrame) -> List : 
-        pass
+    def predict(self, testingData : pd.DataFrame) -> List : 
+        # Aim : Use the models from fitting to predict the outcome of each row in the testingData.
+        # Calculation:
+        #   For each row,
+        #       For each possible outcome.
+        #           calculate the relative probability of (row | outcome) = P(row[0] | outcome) * P(row[1] | outcome) * ... * P(row[n] | outcome) * Prior(outcome)
+        #           and choose the outcome with the highest probability
+
+        output = [-1 for x in range(len(testingData.columns))]
+        print(output)
+
+        # for rowIndex in range(len(testingData)):
+        #     dataRow = testingData.iloc[rowIndex]
+        #     outcomeChosen = None # Outcome Chosen = the outcome with the highest probability of success
+        #     outcomeChosenProbability = -1
+        #     for outcome in range(self.numberOfOutcomes):
+                
+        #         calculatedLikelihoods = []
+        #         for rowIndex in len(dataRow):
+        #             #
+        #             calculatedLikelihoods.append(self.likelihoodModels[rowIndex].predict(dataRow[rowIndex], outcome))
+
 

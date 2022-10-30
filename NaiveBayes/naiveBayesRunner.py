@@ -41,3 +41,4 @@ if __name__ == '__main__':
     # Fit the data to the model.
     model = NaiveBayesModel()
     model.fit(trainingData, dataClassifications, trainingOutcomes)
+    predictions = model.predict(testingData)
