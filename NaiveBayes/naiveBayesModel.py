@@ -1,5 +1,7 @@
 from abc import abstractmethod
 import enum
+from functools import reduce
+import math
 from operator import index
 from typing import Any, List
 from sklearn import preprocessing
@@ -88,7 +90,14 @@ class BinaryDistrubtion(LikelihoodModel):
         logging.info("\tBinaryDistribution: Successfully fit to inputted data")
 
     def predict(self, x, cls):
-        pass
+        encodedValue = self.dataEncoder.transform([x])[0]
+        logging.debug(f"\tBinaryDistrubtion : Predicting : Encoded revieved value {x} as {encodedValue}")
+        # Determine the encoded value of the feature x
+        probabilityOfXGivenCls = self.successProbabilites[cls]
+        # P(x | cls) = (P(x == 1 | cls))(x) + (1 - P(x == 1 | cls))(1-x)
+        calculatedProbabiltiy = probabilityOfXGivenCls*encodedValue + (1 - probabilityOfXGivenCls)*(1 - encodedValue)
+        logging.debug(f"\tBinaryDistrubtion : Predicting : P({x}|{cls}) = {calculatedProbabiltiy}")
+        return calculatedProbabiltiy
 
 class MultiModelDistribution(LikelihoodModel):
     
@@ -129,12 +138,20 @@ class MultiModelDistribution(LikelihoodModel):
         logging.info("\tMutliModal: Successfully fit to inputted data")
 
     def predict(self, x, cls):
-        pass
+        
+        encodedValue = self.dataEncoder.transform([x])[0]
+        logging.debug(f"\tMutliModal : Predicting : Encoded revieved value {x} as {encodedValue}")
+        # Determine the encoded value of the feature x
+        probabilityOfXGivenCls = self.successProbabilites[cls][encodedValue]
+        # P(x | cls) = (P(x == 1 | cls))(x) + (1 - P(x == 1 | cls))(1-x)
+        calculatedProbabiltiy = probabilityOfXGivenCls
+        logging.debug(f"\tMutliModal : Predicting : P({x}|{cls}) = {calculatedProbabiltiy}")
+        return calculatedProbabiltiy
 
 
 class GaussianDistribution(LikelihoodModel):
     
-    successDistributionStats = [] 
+    distributionStats : pd.DataFrame
 
     def fitToData(self):
 
@@ -142,13 +159,21 @@ class GaussianDistribution(LikelihoodModel):
 
         # For each class, find the standard deviation and mean of values when that class is the outcome.
         groupedData = self.dataOutcomesTbl.groupby('outcomes').agg(['std', 'mean'])
-        self.successDistributionStats = groupedData
+        self.distributionStats = groupedData
         logging.info("\tGuassian: Successfully calculated standard deviation and mean for each outcome")
-        logging.debug(f"\t\n{self.successDistributionStats}")
+        logging.debug(f"\t\n{self.distributionStats}")
         logging.info("\tGuassian: Successfully fit to inputted data")
 
     def predict(self, x, cls):
-        pass
+        
+        # Grab the row of self.DistrubtionStats that corresponds to the given class.
+        # Calulate the probability using the GaussianDistribution Formula;
+        row = self.distributionStats.loc[cls]
+        standardDeviation, mean = row[0], row[1]
+        # P(x | y) == (1/sqrt(2 * pi * std))*exp(-(x - mean)^2/(2*std^2))
+        calculatedProbability = (1/float(math.sqrt(2 * math.pi * standardDeviation**2))) * math.exp(-(float((x - mean)**2) / float(2 * (standardDeviation ** 2))))
+        logging.debug(f"\tGuassian: Predicting P({x} | {cls}) = {calculatedProbability}")
+        return calculatedProbability
 
 class NaiveBayesModel:
     """
@@ -237,18 +262,27 @@ class NaiveBayesModel:
         #           calculate the relative probability of (row | outcome) = P(row[0] | outcome) * P(row[1] | outcome) * ... * P(row[n] | outcome) * Prior(outcome)
         #           and choose the outcome with the highest probability
 
-        output = [-1 for x in range(len(testingData.columns))]
-        print(output)
-
-        # for rowIndex in range(len(testingData)):
-        #     dataRow = testingData.iloc[rowIndex]
-        #     outcomeChosen = None # Outcome Chosen = the outcome with the highest probability of success
-        #     outcomeChosenProbability = -1
-        #     for outcome in range(self.numberOfOutcomes):
+        output = [-1 for x in range(len(testingData))]
+        logging.info("Determining the outcome with the highest probability of occuring with each row in the testingData...")
+        for rowIndex in range(len(testingData)): # For each row,
+            logging.debug(f"Evaluating Row {rowIndex}")
+            dataRow = testingData.iloc[rowIndex] # Grab the row data.
+            outcomeChosen = None # Outcome Chosen = the outcome with the highest probability of success
+            outcomeChosenProbability = -1 
+            for outcome in range(self.numberOfOutcomes): # For each possible outcome,
                 
-        #         calculatedLikelihoods = []
-        #         for rowIndex in len(dataRow):
-        #             #
-        #             calculatedLikelihoods.append(self.likelihoodModels[rowIndex].predict(dataRow[rowIndex], outcome))
-
-
+                # Calculate the likelihood of each row elements given the outcome
+                calculatedLikelihoods = []
+                for index, feature in enumerate(dataRow.values):
+                    calculatedLikelihoods.append(self.likelihoodModels[index].predict(feature, outcome))
+                
+                # Aggregate those values together to find the calculated probability,
+                # Repalce the current outcome chosen if the found probability is higher than the record.
+                calculatedProbability = reduce(lambda x, y: x * y, calculatedLikelihoods) * self.priorList[outcome]
+                if outcomeChosenProbability < calculatedProbability:
+                    # print(f"Replacing a worse outcome of {outcome} P = {outcomeChosenProbability} with {outcome} {calculatedProbability}")
+                    outcomeChosen = outcome
+                    outcomeChosenProbability = calculatedProbability
+            output[rowIndex] = outcomeChosen
+        logging.info("Successfully determined the most likely outcome for each row in the input data.")
+        return self.outcomeEncoder.inverse_transform(output)
