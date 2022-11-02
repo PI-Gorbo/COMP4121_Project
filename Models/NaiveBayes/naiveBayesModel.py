@@ -254,13 +254,14 @@ class NaiveBayesModel:
             self.likelihoodModels.append(model)
 
 
-    def predict(self, testingData : pd.DataFrame) -> List : 
+    def predict(self, testingData : pd.DataFrame) -> List: 
         # Aim : Use the models from fitting to predict the outcome of each row in the testingData.
         # Calculation:
         #   For each row,
         #       For each possible outcome.
         #           calculate the relative probability of (row | outcome) = P(row[0] | outcome) * P(row[1] | outcome) * ... * P(row[n] | outcome) * Prior(outcome)
         #           and choose the outcome with the highest probability
+        #           Store the outcome with the highest probability in the ouptut list
 
         output = [-1 for x in range(len(testingData))]
         logging.info("Determining the outcome with the highest probability of occuring with each row in the testingData...")
@@ -280,9 +281,10 @@ class NaiveBayesModel:
                 # Repalce the current outcome chosen if the found probability is higher than the record.
                 calculatedProbability = reduce(lambda x, y: x * y, calculatedLikelihoods) * self.priorList[outcome]
                 if outcomeChosenProbability < calculatedProbability:
-                    # print(f"Replacing a worse outcome of {outcome} P = {outcomeChosenProbability} with {outcome} {calculatedProbability}")
                     outcomeChosen = outcome
                     outcomeChosenProbability = calculatedProbability
             output[rowIndex] = outcomeChosen
+
+            
         logging.info("Successfully determined the most likely outcome for each row in the input data.")
         return self.outcomeEncoder.inverse_transform(output)
