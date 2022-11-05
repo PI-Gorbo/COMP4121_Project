@@ -6,8 +6,8 @@ import pandas as pd
 from sklearn import model_selection as ms
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix
-from naiveBayesModel import NaiveBayesModel, DistributionType
-from ModelHelpers.runnerHelpers import RunnerHelpers    
+from logisticRegressionModel import DistributionType, LogisticRegressionModel, GradientAscentMethod
+
 
 def CalculateAccuracy(predictions : List, actual : List) -> float:
         
@@ -23,7 +23,7 @@ def printOutcomes(predictions : List, actual : List, DistanceType : str):
     print(predictions)
     print(actual)
     # Calculate how accurate the list of predictions were compared to the testing outcomes
-    print(f"Model accuracy for {DistanceType} distance: {CalculateAccuracy(predictions, actual)}")
+    print(f"Model precision for {DistanceType} distance: {CalculateAccuracy(predictions, actual)}")
     # Generate a confustion matrix
     trueNegative, falsePositive, falseNegative, truePositive = confusion_matrix(testingOutcomes, predictions).ravel()
     print(f"Confustion Matrix:")
@@ -32,7 +32,7 @@ def printOutcomes(predictions : List, actual : List, DistanceType : str):
     print(f"False {falsePositive} \t {falseNegative}")
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     data = pd.read_csv("./../../PreparedDatasets/BankInfo/bank-additional-full.csv",sep=";")
     inputs = data.iloc[:,:-1].drop(columns=['campaign'])
     outputs = data.iloc[:,-1].to_list()
@@ -41,29 +41,29 @@ if __name__ == '__main__':
     trainingData, testingData, trainingOutcomes, testingOutcomes = ms.train_test_split(inputs, outputs, test_size=0.25, random_state=0)
                                                                     # test size of 0.25 = 25% of the data will be used in testing.'
     dataClassifications = [
-        DistributionType.GaussianDST, # age
-        DistributionType.MultiModalDST, # job
-        DistributionType.MultiModalDST, # marital
-        DistributionType.MultiModalDST, # ediucation
-        DistributionType.MultiModalDST, # default
-        DistributionType.MultiModalDST, # housing
-        DistributionType.MultiModalDST, # loan
-        DistributionType.BinaryDST, # contact
-        DistributionType.MultiModalDST, # month
-        DistributionType.MultiModalDST, # day of the week
-        DistributionType.GaussianDST, # Duration
-        DistributionType.GaussianDST, # pdays -> Will need cleaning for a nice gaussian
-        DistributionType.GaussianDST, # previous
-        DistributionType.MultiModalDST, # poutcome
-        DistributionType.GaussianDST, # emp.var.rate
-        DistributionType.GaussianDST, # cons.price.idx
-        DistributionType.GaussianDST, # cons.conf.idx
-        DistributionType.GaussianDST, # euribor3m
-        DistributionType.GaussianDST, # nr. employed
+        DistributionType.RealValued, # age
+        DistributionType.Labeled, # job
+        DistributionType.Labeled, # marital
+        DistributionType.Labeled, # ediucation
+        DistributionType.Labeled, # default
+        DistributionType.Labeled, # housing
+        DistributionType.Labeled, # loan
+        DistributionType.Labeled, # contact
+        DistributionType.Labeled, # month
+        DistributionType.Labeled, # day of the week
+        DistributionType.RealValued, # Duration
+        DistributionType.RealValued, # pdays -> Will need cleaning for a nice gaussian
+        DistributionType.RealValued, # previous
+        DistributionType.Labeled, # poutcome
+        DistributionType.RealValued, # emp.var.rate
+        DistributionType.RealValued, # cons.price.idx
+        DistributionType.RealValued, # cons.conf.idx
+        DistributionType.RealValued, # euribor3m
+        DistributionType.RealValued, # nr. employed
     ]
-    # Fit the data to the model.
-    model = NaiveBayesModel()
-    model.fit(trainingData, dataClassifications, trainingOutcomes)
+    # Fit the data to the model.A
+    model = LogisticRegressionModel()
+    model.fit(trainingData, dataClassifications, trainingOutcomes, 600, 0.5, GradientAscentMethod.Batch, 2000)
     predictions = model.predict(testingData)
     
     # Calculate how accurate the list of predictions were compared to the testing outcomes
