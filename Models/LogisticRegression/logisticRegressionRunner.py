@@ -6,76 +6,98 @@ import pandas as pd
 from sklearn import model_selection as ms
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix
-from logisticRegressionModel import DistributionType, LogisticRegressionModel, GradientAscentMethod
+from .logisticRegressionModel import LogisticRegressionModel, GradientAscentMethod
+from ..Helpers import Helpers, Dataset, StdDistributionType
+import numpy as np
 
-
-def CalculateAccuracy(predictions : List, actual : List) -> float:
-        
-        if (len(predictions) != len(actual)):
-            raise ValueError("Predictions array must be the same length as the actual array")
-
-        # calculate total predictions and true positive predictions.
-        totalPredictions = len(predictions)
-        totalTruePositives = len([1 for index in range(len(predictions)) if predictions[index] == actual[index]])
-        return float(totalTruePositives) / float(totalPredictions)
-
-def printOutcomes(predictions : List, actual : List, DistanceType : str):
-    print(predictions)
-    print(actual)
-    # Calculate how accurate the list of predictions were compared to the testing outcomes
-    print(f"Model precision for {DistanceType} distance: {CalculateAccuracy(predictions, actual)}")
-    # Generate a confustion matrix
-    trueNegative, falsePositive, falseNegative, truePositive = confusion_matrix(testingOutcomes, predictions).ravel()
-    print(f"Confustion Matrix:")
-    print(f"\t\tPositive\tNegative")
-    print(f"True {truePositive} \t {trueNegative}")
-    print(f"False {falsePositive} \t {falseNegative}")
-
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
-    data = pd.read_csv("./../../PreparedDatasets/BankInfo/bank-additional-full.csv",sep=";")
-    inputs = data.iloc[:,:-1].drop(columns=['campaign'])
-    outputs = data.iloc[:,-1].to_list()
-
-    # Split the data into testing and training sets.
-    trainingData, testingData, trainingOutcomes, testingOutcomes = ms.train_test_split(inputs, outputs, test_size=0.25, random_state=0)
-                                                                    # test size of 0.25 = 25% of the data will be used in testing.'
-    dataClassifications = [
-        DistributionType.RealValued, # age
-        DistributionType.Labeled, # job
-        DistributionType.Labeled, # marital
-        DistributionType.Labeled, # ediucation
-        DistributionType.Labeled, # default
-        DistributionType.Labeled, # housing
-        DistributionType.Labeled, # loan
-        DistributionType.Labeled, # contact
-        DistributionType.Labeled, # month
-        DistributionType.Labeled, # day of the week
-        DistributionType.RealValued, # Duration
-        DistributionType.RealValued, # pdays -> Will need cleaning for a nice gaussian
-        DistributionType.RealValued, # previous
-        DistributionType.Labeled, # poutcome
-        DistributionType.RealValued, # emp.var.rate
-        DistributionType.RealValued, # cons.price.idx
-        DistributionType.RealValued, # cons.conf.idx
-        DistributionType.RealValued, # euribor3m
-        DistributionType.RealValued, # nr. employed
-    ]
-    # Fit the data to the model.A
-    model = LogisticRegressionModel()
-    model.fit(trainingData, dataClassifications, trainingOutcomes, 600, 0.5, GradientAscentMethod.Batch, 2000)
-    predictions = model.predict(testingData)
+class Runner:
     
-    # Calculate how accurate the list of predictions were compared to the testing outcomes
-    print(f"Model accuracy: {CalculateAccuracy(predictions, testingOutcomes)}")
-    trueNegative, falsePositive, falseNegative, truePositive = confusion_matrix(testingOutcomes, predictions).ravel()
-    print(f"Confustion Matrix:")
-    print(f"\tPositive\tNegative")
-    print(f"True  {truePositive} \t {trueNegative}")
-    print(f"False {falsePositive} \t {falseNegative}")
-    print(f"True Positive Rate : {truePositive / (truePositive + falseNegative)}")
-    print(f"False Positive Rate : {1 - truePositive / (truePositive + falseNegative)}")
-    print(f"True Negative Rate : {trueNegative / (trueNegative + falsePositive)}")
-    print(f"False Negative Rate : {1 - trueNegative / (trueNegative + falsePositive)}")
+    def run(self, dataset : Dataset):
+
+
+        logging.basicConfig(level=logging.INFO)
+
+        if (dataset == Dataset.Bank):
+
+            data = pd.read_csv("./PreparedDatasets/BankInfo/bank-additional-full.csv",sep=";")
+            inputs = data.iloc[:,:-1].drop(columns=['campaign'])
+            outputs = data.iloc[:,-1].to_list()
+
+            # Split the data into testing and training sets.
+            trainingData, testingData, trainingOutcomes, testingOutcomes = ms.train_test_split(inputs, outputs, test_size=0.25, random_state=0)
+                                                                            # test size of 0.25 = 25% of the data will be used in testing.'
+            dataClassifications = [
+                StdDistributionType.RealValued, # age
+                StdDistributionType.Labeled, # job
+                StdDistributionType.Labeled, # marital
+                StdDistributionType.Labeled, # ediucation
+                StdDistributionType.Labeled, # default
+                StdDistributionType.Labeled, # housing
+                StdDistributionType.Labeled, # loan
+                StdDistributionType.Labeled, # contact
+                StdDistributionType.Labeled, # month
+                StdDistributionType.Labeled, # day of the week
+                StdDistributionType.RealValued, # Duration
+                StdDistributionType.RealValued, # pdays -> Will need cleaning for a nice gaussian
+                StdDistributionType.RealValued, # previous
+                StdDistributionType.Labeled, # poutcome
+                StdDistributionType.RealValued, # emp.var.rate
+                StdDistributionType.RealValued, # cons.price.idx
+                StdDistributionType.RealValued, # cons.conf.idx
+                StdDistributionType.RealValued, # euribor3m
+                StdDistributionType.RealValued, # nr. employed
+            ]
+            # Fit the data to the model.A
+            model = LogisticRegressionModel()
+            model.fit(trainingData, dataClassifications, trainingOutcomes, 100, 0.5, GradientAscentMethod.Batch, 2000)
+            predictions = model.predict(testingData)
+            Helpers.PrintMetrics(predictions, testingOutcomes, "Logisitic Regression")
+        
+        if (dataset == Dataset.Cancer):
+
+            """
+                7. Attribute Information: (class attribute has been moved to last column)
+
+                #  Attribute                     Domain
+                -- -----------------------------------------
+                1. Sample code number            id number
+                2. Clump Thickness               1 - 10
+                3. Uniformity of Cell Size       1 - 10
+                4. Uniformity of Cell Shape      1 - 10
+                5. Marginal Adhesion             1 - 10
+                6. Single Epithelial Cell Size   1 - 10
+                7. Bare Nuclei                   1 - 10
+                8. Bland Chromatin               1 - 10
+                9. Normal Nucleoli               1 - 10
+                10. Mitoses                       1 - 10
+                11. Class:                        (2 for benign, 4 for malignant)
+            """
+            
+            data = pd.read_csv("./PreparedDatasets/BreastCancer/BreastCancer_Wisconsin/breast-cancer-wisconsin.data.txt", sep=",")
+            data = data.replace("?", np.nan)
+            indexesWithNan = data.index[data.isnull().any(axis=1)]
+            data = data.drop(indexesWithNan, 0)
+            inputs = data[data.columns[1:10]]
+            predictions = data[data.columns[-1]]
+            trainingData, testingData, trainingOutcomes, testingOutcomes = ms.train_test_split(inputs, predictions, test_size=0.25, random_state=0)
+
+            dataClassifications = [
+                StdDistributionType.Labeled, # Clump Thickness
+                StdDistributionType.Labeled, # Uniformity of Cell Size 
+                StdDistributionType.Labeled, # Uniformity of Cell Shape
+                StdDistributionType.Labeled, # Marginal Adhesion
+                StdDistributionType.Labeled, # Single Epithelial Cell Size
+                StdDistributionType.Labeled, # Bare Nuclei
+                StdDistributionType.Labeled, # Bland Chromatin
+                StdDistributionType.Labeled, # Normal Nucleoli
+                StdDistributionType.Labeled, # Mitoses
+            ]
+            # Fit the data to the model.
+            model = LogisticRegressionModel()
+            model.fit(trainingData, dataClassifications, trainingOutcomes, 100, 0.5, GradientAscentMethod.Batch, 2000)
+            predictions = model.predict(testingData)
+            Helpers.PrintMetrics(predictions, testingOutcomes, "Logistic Regression")
+        
+
 
 

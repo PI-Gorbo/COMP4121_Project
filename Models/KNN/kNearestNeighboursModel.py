@@ -9,10 +9,7 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sortedcontainers import SortedKeyList
 import numpy as np
-
-class DistributionType(enum.Enum):
-    Labeled = 1
-    RealValued = 2
+from ..Helpers import StdDistributionType
 
 class DistanceMetricType(enum.Enum):
     Euclidian = 1
@@ -33,8 +30,8 @@ class DistanceCalculator():
             for index in range(len(x)):
                 total += abs(x[index] - y[index])
             return total
-
-
+        if distanceMetric == DistanceMetricType.Cosine:
+            return -abs(float(np.dot(x, y)) / float(np.linalg.norm(x)*np.linalg.norm(y)))
 
 class KNearestNeighboursModel():
     
@@ -47,7 +44,7 @@ class KNearestNeighboursModel():
     encodedClasses = List
 
     # Fits to the data, by converting all labeled data to encoded data
-    def fit(self, trainingData : pd.DataFrame, trainingDataColumnDistributionTypes: List[DistributionType], trainingClases : List):
+    def fit(self, trainingData : pd.DataFrame, trainingDataColumnDistributionTypes: List[StdDistributionType], trainingClases : List):
         
         logging.info("Creating new KNN model for:")
         logging.info(f"\n{trainingData}")
@@ -64,7 +61,7 @@ class KNearestNeighboursModel():
         logging.info("Successfully fit to data")
 
     # A function for encoding the input table's columns if they are labeled data.
-    def encodeTable(self, inputTable : pd.DataFrame, columnDistributionTypes : List[DistributionType]) -> tuple[pd.DataFrame, List]:
+    def encodeTable(self, inputTable : pd.DataFrame, columnDistributionTypes : List[StdDistributionType]) -> tuple[pd.DataFrame, List]:
 
         # Go through each column in the tabgle, and if columnDistrubtionTypes specifies that the data is labeled,
         # encode it.
@@ -78,7 +75,7 @@ class KNearestNeighboursModel():
 
         for columIndex, distributionType in enumerate(self.columnDistributionTypes):
 
-            if (distributionType == DistributionType.Labeled): # Encode the column and store an encoder for use later.
+            if (distributionType == StdDistributionType.Labeled): # Encode the column and store an encoder for use later.
                 if (len(self.columnEncoders) == 0):
                     columnEncoder = LabelEncoder()
                     encodedData[encodedData.columns[columIndex]] = columnEncoder.fit_transform(encodedData[encodedData.columns[columIndex]])
@@ -105,7 +102,7 @@ class KNearestNeighboursModel():
         # Function: Make a prediction for a given row. We use the distanceMetricIndex and the row index to store the value in the predictions matrix,
         #           and use the row and distanceMetric to calculate the distance from the row to every row in the trainingDataSet.
         def makePrediction(distanceMetricIndex, rowIndex, row, distanceMetic, predictions):
-            logging.info(f"row {rowIndex}/{len(testingData)}")
+            logging.debug(f"row {rowIndex}/{len(testingData)}")
             predictions[distanceMetricIndex][rowIndex] = calculateShortestDistanceClass(row, distanceMetic)
 
         # Function : Calculate the shortest distane between a given row and every row in the trainingDataSet.

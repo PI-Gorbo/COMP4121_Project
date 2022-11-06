@@ -6,10 +6,7 @@ from typing import List
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 import numpy as np
-
-class DistributionType(enum.Enum):
-    Labeled = 1
-    RealValued = 2
+from ..Helpers import StdDistributionType
 
 class GradientAscentMethod(enum.Enum):
     Batch = 1
@@ -25,7 +22,7 @@ class LogisticRegressionModel():
     classEncoder : LabelEncoder = None
     params = None
 
-    def encodeTable(self, inputTable : pd.DataFrame, columnDistributionTypes : List[DistributionType]) -> tuple[pd.DataFrame, List]:
+    def encodeTable(self, inputTable : pd.DataFrame, columnDistributionTypes : List[StdDistributionType]) -> tuple[pd.DataFrame, List]:
         # Go through each column in the tabgle, and if columnDistrubtionTypes specifies that the data is labeled,
         # encode it.
         encodedData = inputTable
@@ -39,7 +36,7 @@ class LogisticRegressionModel():
 
         for columIndex, distributionType in enumerate(columnDistributionTypes):
 
-            if (distributionType == DistributionType.Labeled): # Encode the column and store an encoder for use later.
+            if (distributionType == StdDistributionType.Labeled): # Encode the column and store an encoder for use later.
 
                 if (len(self.columnEncoders) == 0):
                     columnEncoder = LabelEncoder()
@@ -68,7 +65,7 @@ class LogisticRegressionModel():
         return 1 / (1 + np.exp(-z))
 
     def fit(self, trainingData : pd.DataFrame, 
-            trainingDataClassifications : List[DistributionType], 
+            trainingDataClassifications : List[StdDistributionType], 
             trainingOutcomes : List, 
             MaxIterations : int,
             LearningRate : float,
@@ -91,7 +88,7 @@ class LogisticRegressionModel():
 
         encodedTrainingData["biasTerm"] = np.ones(len(encodedTrainingData))
         for iteration in range(MaxIterations):
-            logging.info(f"Iteration {iteration}/{MaxIterations}")
+            logging.debug(f"Iteration {iteration}/{MaxIterations}")
 
             if (GradientAscentMethod == GradientAscentMethod.Batch):
 
@@ -154,7 +151,7 @@ class LogisticRegressionModel():
         
         # Encode the testing data.
         encodedTestingData, _ = self.encodeTable(testingData, self.columnDistributionTypes)
-
+        encodedTestingData["biasTerm"] = np.ones(len(encodedTestingData))
         # For each row in the encodedTestData, make a prediction using the sigmoid function and the parameters
         for index, row in encodedTestingData.iterrows():
             
