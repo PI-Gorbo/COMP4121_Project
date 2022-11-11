@@ -2,11 +2,13 @@ import enum
 import logging
 import math
 from typing import List, Tuple
-from sklearn.metrics import confusion_matrix
 import pandas as pd
 from sklearn import model_selection as ms
+from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.preprocessing import LabelEncoder
 import numpy as np
+import seaborn as sn
+import matplotlib.pyplot as plt
 
 class Dataset(enum.Enum):
     Bank = 0
@@ -24,37 +26,14 @@ class Helpers:
         if (len(predictions) != len(actual)):
             raise ValueError("Predictions array must be the same length as the actual array")
         
-        logging.debug("Predictions : ")
-        logging.debug(f"{predictions}")
-        logging.debug("Actual : ")
-        logging.debug(f"{actual}")
+        logging.info("_____________________________________________________________________")
+        logging.info(f"Results for {title}")
+        logging.info(f"\n{classification_report(actual, predictions)}")
 
-        # Calculate how accurate the list of predictions were compared to the testing outcomes
-        trueNegative, falsePositive, falseNegative, truePositive = confusion_matrix(actual, predictions).ravel()
-        logging.info(f"{title}")
-        logging.info(f"\tPositive\tNegative")
-        logging.info(f"True  {truePositive} \t {trueNegative}")
-        logging.info(f"False {falsePositive} \t {falseNegative}")
-        logging.info("")
-        logging.info("True Positive -> Correct Positive Predictions")
-        logging.info("True Negative -> Correct Negative Predictions")
-        logging.info("False Positive -> Incorrect Positive Precitions (Actually Negative)")
-        logging.info("False Negative -> Incorrect Negative Predictions (Actually Positive)")
-        recall = truePositive / (truePositive + falseNegative)
-
-        logging.info("")
-        logging.info(f"True Positive Rate (Recall) (TP / (TP + FN) ) : {recall} -> Ie How many positive predictions did the model get right?")
-        logging.info(f"False Positive Rate : {1 - truePositive / (truePositive + falseNegative)}")
-        logging.info(f"True Negative Rate : {trueNegative / (trueNegative + falsePositive)}")
-        logging.info(f"False Negative Rate : {1 - trueNegative / (trueNegative + falsePositive)}")
-    
-        logging.info("")
-        logging.info(f"Model accuracy (Total Correct / Total Precdictions) :  {sum([trueNegative, truePositive]) / sum([trueNegative, falsePositive, falseNegative, truePositive])}")
-        precision = truePositive / (truePositive + falsePositive)
-        logging.info(f"Model precision ( TP / (TP + FP) ) : {precision}")
-        logging.info(f"F1 Score : {2 * (precision * recall / (precision + recall))} -> Higher is better with 1 the best.")
-        logging.info(f"MCC (Matthews Correlation Coefficient) = {(truePositive * trueNegative - (falsePositive * falseNegative)) / math.sqrt((truePositive + falsePositive) * (truePositive + falseNegative) * (trueNegative + falsePositive) * (trueNegative + falseNegative))}")
-        logging.info("\t MCC is between -1.0 and 1.0 where 1.0 is perfect.")
+        confustionMatrix = confusion_matrix(actual, predictions)
+        sn.heatmap(confustionMatrix, annot=True)
+        plt.savefig(f'{title}_confusion.png')
+        plt.clf()
 
 
     @staticmethod

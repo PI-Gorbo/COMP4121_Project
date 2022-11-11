@@ -10,4 +10,4 @@ class Runner:
         model = DecisionTreeModel()
         model.fit(trainingData, dataclassification, trainingOutcomes, 2, 30, InformationGainMetric.Entropy)
         predictions = model.predict(testingData)
-        Helpers.PrintMetrics(predictions, testingOutcomes, "Decision Tree")
+        Helpers.PrintMetrics(predictions, testingOutcomes, "Decision Tree - Entropy")

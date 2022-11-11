@@ -9,11 +9,11 @@ if __name__ == '__main__':
     # runner = LogisticRegression()
     # runner.run(dataset=Dataset.Cancer)
 
-    runner = KNN()
-    runner.run(dataset=Dataset.Cancer)
+    # runner = KNN()
+    # runner.run(dataset=Dataset.Cancer)
 
     # runner = NaiveBayes()
     # runner.run(dataset=Dataset.Cancer)
 
-    # runner = DecisionTree()
-    # runner.run(dataset=Dataset.Cancer)
+    runner = DecisionTree()
+    runner.run(dataset=Dataset.Cancer)
