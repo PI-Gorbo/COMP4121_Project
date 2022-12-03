@@ -6,8 +6,8 @@ from Models.Helpers import Dataset
 from Models.DecisionTree.DecisionTreeRunner import Runner as DecisionTree
 
 if __name__ == '__main__':
-    # runner = LogisticRegression()
-    # runner.run(dataset=Dataset.Cancer)
+    runner = LogisticRegression()
+    runner.run(dataset=Dataset.Cancer)
 
     # runner = KNN()
     # runner.run(dataset=Dataset.Cancer)
@@ -15,5 +15,5 @@ if __name__ == '__main__':
     # runner = NaiveBayes()
     # runner.run(dataset=Dataset.Cancer)
 
-    runner = DecisionTree()
-    runner.run(dataset=Dataset.Cancer)
+    # runner = DecisionTree()
+    # runner.run(dataset=Dataset.Cancer)
